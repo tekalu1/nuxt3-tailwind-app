@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "Vue.volar",
+    "Vue.vscode-typescript-vue-plugin",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "heybourn.headwind",
+    "austenc.tailwind-docs",
+    "bourhaouta.tailwindshades",
+    "antfu.iconify",
+    "nuxtr.nuxtr-vscode",
+    "lokalise.i18n-ally"
+  ]
+}
