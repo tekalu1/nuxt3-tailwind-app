@@ -410,6 +410,78 @@ git push --force-with-lease origin feature/xxx
 
 ---
 
+## AI並行開発のためのWorktree運用
+
+複数のAIセッションで並行開発を行う場合、git worktreeを使用してブランチごとに独立した作業ディレクトリを作成します。
+
+### ディレクトリ構成
+
+```
+{workspace}/
+├── {project-name}/              # メインリポジトリ（main）
+└── {project-name}-worktrees/    # worktree専用フォルダ
+    ├── feature-auth/            # feature/user-auth
+    ├── feature-flow/            # feature/flow-export
+    └── fix-bug-123/             # fix/bug-123
+```
+
+### worktreeの作成
+
+```bash
+# worktree専用フォルダを作成（初回のみ）
+mkdir ../{project-name}-worktrees
+
+# メインリポジトリで新しいworktreeを追加
+cd {project-name}
+git worktree add ../{project-name}-worktrees/feature-auth -b feature/user-auth
+```
+
+### worktreeの管理
+
+```bash
+# 一覧表示
+git worktree list
+
+# 削除（作業完了後）
+git worktree remove ../{project-name}-worktrees/feature-auth
+
+# クリーンアップ
+git worktree prune
+```
+
+### 運用ルール
+
+| ルール | 説明 |
+|--------|------|
+| 1セッション1worktree | 各AIセッションは専用のworktreeで作業 |
+| 機能単位で分割 | 依存関係のない機能ごとにブランチを分ける |
+| 定期的にrebase | 長期ブランチは `git rebase main` で最新化 |
+| PRベースでマージ | mainへ直接マージせず、PRでレビュー |
+
+### worktree作成後の初期設定
+
+各worktreeで以下を実行：
+
+```bash
+cd ../{project-name}-worktrees/feature-auth
+
+# 依存関係のインストール
+pnpm install
+
+# 環境変数ファイルのコピー（必要に応じて）
+cp ../{project-name}/.env.local .env.local
+
+# Nuxtの準備
+pnpm run prepare
+```
+
+### 注意事項
+
+- **DBファイル**: SQLite等の共有リソースは排他制御に注意
+- **node_modules**: 各worktreeに個別にインストールが必要
+
+---
+
 ## 関連ドキュメント
 
 - [開発ガイド トップ](../development-guide.md)

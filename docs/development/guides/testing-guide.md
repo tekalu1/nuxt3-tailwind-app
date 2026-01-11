@@ -4,6 +4,17 @@
 
 ---
 
+## テスト作成の基本原則
+
+**重要: テストの作成・実施には `test-engineer` エージェントを使用してください。**
+
+テストエージェントは以下を自動的に考慮します:
+- シナリオの網羅性
+- パターンの漏れ防止
+- UI↔バックエンド整合性の確認
+
+---
+
 ## テスト方針
 
 ### テストツール
@@ -200,6 +211,78 @@ test('user login flow', async ({ page }) => {
 - [ ] 新規ページ追加に伴う画面遷移フローをテストしたか
 - [ ] 認証が必要なページへのアクセス制御をテストしたか
 - [ ] フォーム送信の成功・失敗パターンをテストしたか
+
+#### E2Eテスト設計の重要原則
+
+**1. 実行結果の成功/失敗を明示的に検証する**
+
+```typescript
+// ❌ 悪い例: どのステータスでもパスしてしまう
+const statusText = await statusBadge.textContent()
+expect(['実行中', '完了', '失敗']).toContain(statusText)
+
+// ✅ 良い例: 成功を明示的に検証
+const statusText = await statusBadge.textContent()
+if (statusText === '失敗') {
+  // エラー内容を確認してテストを失敗させる or スキップ
+  const errorMessage = await page.locator('.error-message').textContent()
+  if (errorMessage?.includes('API key not configured')) {
+    test.skip() // 外部依存の問題はスキップ
+    return
+  }
+  throw new Error(`Unexpected failure: ${errorMessage}`)
+}
+expect(statusText).toBe('完了')
+```
+
+**2. 外部依存（APIキー等）がある場合の設計**
+
+```typescript
+// ✅ 良い例: 外部サービス依存のテストは環境に応じて処理
+test('should execute LLM flow', async ({ page }) => {
+  // APIキーがない環境での失敗は想定内としてスキップ
+  const errorVisible = await page.locator('text=Provider not available').isVisible()
+  if (errorVisible) {
+    console.warn('⚠️ LLM test skipped: API key not configured')
+    test.skip()
+    return
+  }
+
+  // 成功を検証
+  await expect(page.locator('.status-badge')).toHaveText('完了')
+})
+```
+
+**3. セレクタの堅牢性**
+
+```typescript
+// ❌ 悪い例: 複数要素に解決される可能性
+const link = page.locator('a[href="/flows"]')
+await expect(link).toBeVisible() // strict mode violation!
+
+// ✅ 良い例: 明示的に最初の要素を選択
+const links = page.locator('a[href="/flows"]')
+await expect(links.first()).toBeVisible()
+
+// ✅ 良い例: より具体的なセレクタを使用
+const backLink = page.locator('header a[href="/flows"]')
+await expect(backLink).toBeVisible()
+```
+
+**4. UI文字列の変更に強いテスト**
+
+```typescript
+// ❌ 悪い例: ハードコードされた日本語文字列
+await expect(page.locator('h1')).toContainText('ダッシュボード')
+
+// ✅ 良い例: セレクタベースで検証（文字列変更に強い）
+await expect(page.locator('[data-testid="dashboard-title"]')).toBeVisible()
+
+// ✅ 良い例: 複数言語に対応
+await expect(page.locator('h1')).toBeVisible()
+const title = await page.locator('h1').textContent()
+expect(['Dashboard', 'ダッシュボード']).toContain(title)
+```
 
 ### Storybookストーリー
 
@@ -409,6 +492,209 @@ describe('useAuth', () => {
 
 ---
 
+## シナリオ・パターン網羅チェックリスト
+
+テストの漏れを防ぐため、以下のチェックリストを使用してください。
+
+### シナリオ網羅チェック
+
+#### UI↔バックエンド整合性テスト
+
+**必須:** UIで提供される機能がバックエンドで正しく実装されているか確認する。
+
+```typescript
+// ✅ 良い例: UIのデフォルトツールがすべて登録されているか確認
+describe('Tool Registry - UI Tool Availability', () => {
+  const uiDefaultTools = [
+    'builtin.control.start',
+    'builtin.control.end',
+    'builtin.control.if',
+    // ... UIで提供されるすべてのツール
+  ]
+
+  it('should have all UI default tools registered', () => {
+    for (const toolId of uiDefaultTools) {
+      expect(hasToolHandler(toolId), `Tool ${toolId} should be registered`).toBe(true)
+    }
+  })
+})
+```
+
+**チェックリスト:**
+- [ ] UIで提供される機能（ツール、コンポーネント）がバックエンドに実装されている
+- [ ] UIとバックエンドで使用するID/キーが一致している
+- [ ] UIの操作が実際のAPIエンドポイントで正しく処理される
+
+#### ユーザーフローベーステスト
+
+**必須:** 実際のユーザー操作をシミュレートしたテストを作成する。
+
+```typescript
+// ✅ 良い例: ユーザーがUIで作成するフローと同じ構造でテスト
+function createRealUserFlow(): Flow {
+  return {
+    nodes: [
+      // UIで作成されるフローと同じ構造
+      { id: 'start', flowId: 'builtin.control.start', ... },
+      { id: 'process', flowId: 'builtin.data.setVariable', ... },
+      { id: 'end', flowId: 'builtin.control.end', ... },
+    ],
+    edges: [...]
+  }
+}
+```
+
+**チェックリスト:**
+- [ ] 新規作成フロー（デフォルトのstart/endノード含む）をテスト
+- [ ] ユーザーがUIで行う典型的な操作をシナリオとしてテスト
+- [ ] エラー発生時のUI表示とバックエンドレスポンスの整合性を確認
+
+### パターン網羅チェック
+
+#### 登録確認テスト
+
+**必須:** 「何が登録/実装されているべきか」を明示的にテストする。
+
+| 対象 | テスト内容 |
+|------|-----------|
+| ToolRegistry | すべてのビルトインツールが登録されている |
+| APIエンドポイント | すべての必須エンドポイントが存在する |
+| ストア | 必要なアクション/ゲッターが実装されている |
+| コンポーネント | 必要なprops/emitsが定義されている |
+
+#### エラーパステスト
+
+**必須:** 異常系のテストを網羅する。
+
+```typescript
+// ✅ 良い例: 未登録ツールの動作確認
+it('should fail gracefully when tool is not found', async () => {
+  const result = await engine.executeFlow(flowWithInvalidTool)
+  expect(result.status).toBe('failed')
+  expect(result.error.message).toContain('Tool not found')
+})
+```
+
+**チェックリスト:**
+- [ ] 未登録/無効なID使用時のエラーハンドリング
+- [ ] 必須パラメータ欠落時の動作
+- [ ] 型不一致時の動作
+- [ ] 外部サービス障害時の動作
+
+#### 外部サービス依存テストの戦略
+
+外部サービス（LLM API、メール送信等）に依存するテストは特別な配慮が必要です。
+
+**原則:**
+1. **ユニット/統合テスト**: モックを使用し、外部依存を排除
+2. **E2Eテスト**: 実際の外部サービスを呼び出すが、設定不備時は適切にスキップ
+
+```typescript
+// ✅ 良い例: 外部依存の適切な処理
+describe('LLM Integration', () => {
+  // ユニットテスト: モックを使用
+  it('should handle LLM response correctly', async () => {
+    const mockLLM = vi.fn().mockResolvedValue({ content: 'test response' })
+    const result = await processWithLLM('input', { llmService: mockLLM })
+    expect(result).toBe('processed: test response')
+  })
+
+  // 統合テスト: モックまたは設定確認
+  it('should call LLM service with correct parameters', async () => {
+    // APIキーがない場合はスキップ
+    if (!process.env.OPENAI_API_KEY) {
+      test.skip()
+      return
+    }
+    // 実際のAPIを呼び出すテスト...
+  })
+})
+```
+
+**E2Eテストでの外部依存処理:**
+```typescript
+// 外部APIが必要なテストのパターン
+test('should execute flow with LLM', async ({ page }) => {
+  await page.goto('/flows/test-flow')
+  await page.click('button:has-text("実行")')
+  await page.waitForTimeout(3000)
+
+  // エラーメッセージを確認
+  const providerError = await page.locator('text=Provider not available').isVisible()
+  const apiKeyError = await page.locator('text=APIキーが設定されていません').isVisible()
+
+  if (providerError || apiKeyError) {
+    // 環境設定の問題 → テストをスキップ（設定不備はテスト対象外）
+    console.warn('⚠️ External service not configured - skipping test')
+    test.skip()
+    return
+  }
+
+  // 本来テストしたい内容を検証
+  await expect(page.locator('.status-badge')).toHaveText('完了')
+})
+```
+
+#### 境界値・特殊値テスト
+
+```typescript
+// ✅ 良い例: 境界値のテスト
+const edgeCases = [
+  { input: '', expected: 'empty string handled' },
+  { input: null, expected: 'null handled' },
+  { input: undefined, expected: 'undefined handled' },
+  { input: [], expected: 'empty array handled' },
+  { input: {}, expected: 'empty object handled' },
+  { input: 'a'.repeat(10000), expected: 'very long string handled' },
+]
+```
+
+**チェックリスト:**
+- [ ] 空値（空文字、空配列、空オブジェクト）
+- [ ] null/undefined
+- [ ] 極端に大きな値/長い文字列
+- [ ] 特殊文字（XSS文字列、SQLインジェクション文字列）
+- [ ] 循環参照
+
+---
+
+## テスト工程別の改善ポイント
+
+### 1. 計画フェーズ
+
+**テストシナリオマトリクスの作成:**
+
+| 機能 | ユニットテスト | 統合テスト | E2E | UI整合性 |
+|------|--------------|-----------|-----|---------|
+| 新規ツール追加 | ハンドラテスト | フロー実行 | 実行確認 | ツール選択可能 |
+| APIエンドポイント | レスポンス形式 | DB連携 | 画面表示 | エラー表示 |
+| UIコンポーネント | props/emits | 親子連携 | ユーザー操作 | - |
+
+### 2. 設計フェーズ
+
+**テストファースト設計:**
+1. UIで提供する機能を先に定義
+2. その機能に必要なバックエンドAPIを特定
+3. 「登録確認テスト」を先に書く
+4. 実装を進める
+
+### 3. 実装フェーズ
+
+**チェックポイント:**
+- 新しいツール/機能を追加したら、登録確認テストに追加
+- UIに機能を追加したら、対応するバックエンドテストを確認
+- モック使用時は、実際のAPIとの整合性を確認
+
+### 4. レビューフェーズ
+
+**レビュー項目:**
+- [ ] UIで使用可能な機能がすべてバックエンドでテストされているか
+- [ ] エラーパスがテストされているか
+- [ ] 境界値がテストされているか
+- [ ] 実際のユーザーフローがシミュレートされているか
+
+---
+
 ## テスト関連のチェックリスト
 
 **実装変更時に必ず確認:**
@@ -421,6 +707,257 @@ describe('useAuth', () => {
 - [ ] すべてのテストが通過することを確認した
 - [ ] テストカバレッジが目標値を満たしている
 - [ ] Storybookストーリーが最新の状態になっている（コンポーネント変更時）
+
+**シナリオ・パターン網羅（追加）:**
+
+- [ ] UI↔バックエンド整合性テストを作成した
+- [ ] 登録確認テストを更新した（新規機能追加時）
+- [ ] ユーザーフローベースのテストを作成した
+- [ ] エラーパス・境界値テストを作成した
+
+**E2Eテスト品質（追加）:**
+
+- [ ] 実行結果の成功/失敗を明示的に検証している（「失敗」でもパスするテストになっていない）
+- [ ] 外部サービス依存のテストは設定不備時に適切にスキップする
+- [ ] セレクタが複数要素に解決される可能性を考慮している（`.first()`の使用等）
+- [ ] UI文字列の変更に強いテスト設計になっている（`data-testid`の活用等）
+- [ ] トースト/モーダル表示後、時間経過後も表示が持続することを確認している（状態持続性テスト）
+
+**非同期処理・状態管理（追加）:**
+
+- [ ] `setTimeout`/`setInterval`を使用するコードに競合状態テストがあるか
+- [ ] 連続操作（開く→閉じる→開く等）をシミュレートしたテストがあるか
+- [ ] `vi.useFakeTimers()`でタイマーを制御しているか
+- [ ] タイマー経過後の状態を検証しているか
+- [ ] 重要なストアには統合テスト（実際のPiniaを使用）があるか
+
+---
+
+## 非同期処理・状態管理のテスト
+
+非同期処理（タイマー、Promise、イベント）を含むコードは、タイミング依存のバグ（Race Condition）が発生しやすいため、特別なテスト戦略が必要です。
+
+### 非同期処理を含むコードの分類
+
+| 種類 | 例 | リスク | 必須テスト |
+|------|-----|--------|----------|
+| **タイマー** | `setTimeout`, `setInterval`, debounce, throttle | 連続操作での競合状態 | タイマーモック + 競合シナリオ |
+| **状態遷移** | モーダル開閉、ローディング状態 | 状態の不整合 | 連続遷移テスト |
+| **API呼び出し** | `$fetch`, `useFetch` | レスポンス順序の逆転 | 並列リクエストテスト |
+| **イベント** | ユーザー入力、WebSocket | イベント順序依存 | 高速連続イベントテスト |
+
+### 必須テストパターン
+
+#### 1. 競合状態テスト（Race Condition Test）
+
+**対象:** タイマーや非同期処理を含むすべてのストア・コンポーザブル
+
+```typescript
+// ✅ 良い例: 連続操作での競合状態をテスト
+describe('Race Condition防止', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('close後すぐにopenしても状態が正しいこと', () => {
+    const store = useModalStore()
+
+    // 最初のモーダルを開いて閉じる
+    store.openModal({ type: 'confirm', message: '確認' })
+    store.closeModal()
+
+    // 即座に新しいモーダルを開く
+    store.showSuccess('成功')
+
+    // タイマー経過後も状態が維持されること
+    vi.advanceTimersByTime(500)
+    expect(store.config?.message).toBe('成功')
+  })
+})
+```
+
+**チェックリスト:**
+- [ ] `setTimeout`/`setInterval`を使用するコードに競合テストがあるか
+- [ ] 連続した操作（開く→閉じる→開く）をシミュレートしているか
+- [ ] タイマー経過後の状態を検証しているか
+
+#### 2. 状態持続性テスト（State Persistence Test）
+
+**対象:** すべてのE2Eテストでのトースト・モーダル・通知の検証
+
+```typescript
+// ❌ 悪い例: 表示されたことだけを確認（一瞬で消えても検出できない）
+const toast = page.locator('text=成功')
+await expect(toast).toBeVisible({ timeout: 5000 })
+
+// ✅ 良い例: 表示後も持続していることを確認
+const toast = page.locator('text=成功')
+await expect(toast).toBeVisible({ timeout: 5000 })
+// 状態持続性確認: Race Conditionで消えていないことを検証
+await page.waitForTimeout(300)
+await expect(toast).toBeVisible()
+```
+
+**適用場面:**
+- トースト通知
+- モーダル表示
+- ローディング状態
+- エラーメッセージ
+
+#### 3. 連続アクションテスト（Rapid Action Test）
+
+**対象:** ボタン連打、フォーム連続送信などのユーザー操作
+
+```typescript
+// ✅ 良い例: 連続クリックでも正しく動作すること
+it('連続クリックでも1回だけ実行されること', async () => {
+  const submitFn = vi.fn()
+  const { result } = renderHook(() => useSubmit(submitFn))
+
+  // 高速で3回クリック
+  await result.current.submit()
+  await result.current.submit()
+  await result.current.submit()
+
+  expect(submitFn).toHaveBeenCalledTimes(1)
+})
+```
+
+### ユニットテストでの非同期処理
+
+#### Vitestのタイマーモック
+
+```typescript
+import { vi, beforeEach, afterEach } from 'vitest'
+
+describe('Timer-based functionality', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('debounce後に実行されること', async () => {
+    const fn = vi.fn()
+    const debounced = useDebounceFn(fn, 300)
+
+    debounced()
+    expect(fn).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(300)
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  it('連続呼び出しでは最後の1回だけ実行されること', () => {
+    const fn = vi.fn()
+    const debounced = useDebounceFn(fn, 300)
+
+    debounced()
+    vi.advanceTimersByTime(100)
+    debounced()
+    vi.advanceTimersByTime(100)
+    debounced()
+    vi.advanceTimersByTime(300)
+
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+})
+```
+
+### 統合テストでの非同期処理
+
+モックを使いすぎると実際のタイミング問題を見逃す可能性があるため、重要なストアは統合テストも作成します。
+
+```typescript
+// ✅ 良い例: 実際のPiniaストアを使った統合テスト
+describe('Modal Store Integration', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.useFakeTimers()
+  })
+
+  it('confirm→showSuccessの連続呼び出しでメッセージが維持されること', async () => {
+    const store = useModalStore()
+
+    // 確認ダイアログを開いてconfirmをクリック
+    const promise = store.confirm('確認しますか？')
+    store.handleConfirm()
+    await promise
+
+    // 即座に成功モーダルを表示
+    store.showSuccess('完了しました')
+
+    // 200ms以上経過後もメッセージが残っていること
+    vi.advanceTimersByTime(300)
+    expect(store.config?.message).toBe('完了しました')
+  })
+})
+```
+
+### コードレビューチェックリスト（非同期処理）
+
+コードレビュー時に以下を確認してください：
+
+#### 実装コードのチェック
+
+- [ ] `setTimeout`/`setInterval`を使用している場合、クリーンアップ処理があるか
+- [ ] タイマーIDを保持し、必要に応じてclearTimeout/clearIntervalしているか
+- [ ] 状態変更とタイマーの間で競合が発生しないか
+- [ ] Promiseチェーンで状態が不整合にならないか
+
+```typescript
+// ❌ 悪い例: タイマーがキャンセルされない
+function closeModal() {
+  isOpen.value = false
+  setTimeout(() => {
+    config.value = null  // 後から開いたモーダルのconfigも消える！
+  }, 200)
+}
+
+// ✅ 良い例: タイマーを管理
+let timer: ReturnType<typeof setTimeout> | null = null
+
+function closeModal() {
+  isOpen.value = false
+  if (timer) clearTimeout(timer)
+  timer = setTimeout(() => {
+    if (!isOpen.value) config.value = null  // 開いていない場合のみクリア
+    timer = null
+  }, 200)
+}
+
+function openModal(cfg: ModalConfig) {
+  if (timer) {
+    clearTimeout(timer)  // 既存のタイマーをキャンセル
+    timer = null
+  }
+  config.value = cfg
+  isOpen.value = true
+}
+```
+
+#### テストコードのチェック
+
+- [ ] `vi.useFakeTimers()`を使用してタイマーをモックしているか
+- [ ] 競合状態（連続操作）のテストがあるか
+- [ ] E2Eで状態の持続性を確認しているか
+- [ ] Promiseの解決順序に依存するテストケースがあるか
+
+### 非同期処理テストのベストプラクティス
+
+| カテゴリ | ベストプラクティス | アンチパターン |
+|---------|------------------|---------------|
+| タイマー | `vi.useFakeTimers()`で制御 | 実時間waitに依存 |
+| 競合状態 | 連続操作シナリオをテスト | 単発操作のみテスト |
+| 状態持続 | 時間経過後も検証 | 表示確認のみ |
+| クリーンアップ | afterEachでリセット | グローバル状態の残留 |
+| モック範囲 | 外部依存のみモック | 内部ロジックまでモック |
 
 ---
 
