@@ -70,16 +70,23 @@ export interface UserProfile {
   age: number
   /** 性別 */
   gender: 'male' | 'female' | 'other'
-  /** 好きなお酒の種類 */
-  favoriteAlcohol: AlcoholType[]
+  /** ユーザー設定 */
+  preferences: UserPreferences
   /** 自己紹介 */
   bio: string
 }
 
 /**
- * お酒の種類
+ * ユーザー設定
  */
-export type AlcoholType = 'beer' | 'sake' | 'wine' | 'whiskey' | 'cocktail' | 'shochu'
+export interface UserPreferences {
+  /** テーマ設定 */
+  theme: 'light' | 'dark' | 'system'
+  /** 通知設定 */
+  notifications: boolean
+  /** 言語設定 */
+  language: 'ja' | 'en'
+}
 ```
 
 ### ドキュメント生成
@@ -171,7 +178,7 @@ definePageMeta({
 
 ### ドキュメント生成スクリプト
 
-`scripts/generate-flow-diagram.js`:
+`scripts/generate-page-diagram.js`:
 
 ```javascript
 import { writeFileSync, readFileSync, mkdirSync } from 'fs'
@@ -246,7 +253,7 @@ export const Default: Story = {
       id: '1',
       name: '山田太郎',
       age: 28,
-      favoriteAlcohol: ['beer', 'sake']
+      role: 'admin'
     }
   }
 }
@@ -281,7 +288,7 @@ npm run build-storybook
     "build-storybook": "storybook build -o docs/development/architecture/components",
     "docs:types": "typedoc",
     "docs:api": "node scripts/generate-api-docs.js",
-    "docs:flow": "node scripts/generate-flow-diagram.js",
+    "docs:flow": "node scripts/generate-page-diagram.js",
     "docs:generate": "npm run docs:types && npm run docs:api && npm run docs:flow"
   }
 }

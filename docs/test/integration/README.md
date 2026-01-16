@@ -36,13 +36,13 @@ docs/test/integration/
     └── {機能名}.md        # 各機能のシナリオ
 
 tests/integration/
-├── engine/               # 実行エンジン関連
-│   ├── ExecutionEngine.test.ts
-│   └── tool-handlers.test.ts
+├── services/             # サービス関連
+│   ├── UserService.test.ts
+│   └── ProductService.test.ts
 ├── api/                  # API関連
-│   └── flows.test.ts
-└── services/             # サービス関連
-    └── llm.test.ts
+│   └── users.test.ts
+└── stores/               # Piniaストア関連
+    └── cart.test.ts
 ```
 
 ---
@@ -121,26 +121,33 @@ describe('Flows API', () => {
 #### サービステスト
 
 ```typescript
-import { ExecutionEngine } from '~/server/engine'
+import { ProductService } from '~/server/services/ProductService'
 
-describe('Execution Engine', () => {
-  it('should execute flow', async () => {
-    const engine = new ExecutionEngine()
-    const result = await engine.execute(flow)
-    expect(result.status).toBe('completed')
+describe('Product Service', () => {
+  it('should create product', async () => {
+    const service = new ProductService()
+    const result = await service.createProduct({ name: 'Test Product', price: 1000 })
+    expect(result.id).toBeDefined()
+    expect(result.name).toBe('Test Product')
   })
 })
 ```
 
-#### ツールテスト
+#### Piniaストアテスト
 
 ```typescript
-import { executeTool } from '~/server/engine/ToolRegistry'
+import { setActivePinia, createPinia } from 'pinia'
+import { useCartStore } from '~/stores/cart'
 
-describe('Tool Registry', () => {
-  it('should execute registered tool', async () => {
-    const result = await executeTool('builtin.ai.llmChat', config, input, context)
-    expect(result).toBeDefined()
+describe('Cart Store', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('should add item to cart', async () => {
+    const cartStore = useCartStore()
+    await cartStore.addItem({ productId: '123', quantity: 1 })
+    expect(cartStore.items).toHaveLength(1)
   })
 })
 ```
@@ -170,11 +177,12 @@ describe('Tool Registry', () => {
 ```typescript
 import { vi } from 'vitest'
 
-// 外部APIのモック
-vi.mock('~/server/services/llm/LLMService', () => ({
-  LLMService: {
-    chat: vi.fn().mockResolvedValue({
-      content: 'Mocked response'
+// 外部決済APIのモック
+vi.mock('~/server/services/PaymentService', () => ({
+  PaymentService: {
+    processPayment: vi.fn().mockResolvedValue({
+      transactionId: 'mock-txn-123',
+      status: 'success'
     })
   }
 }))

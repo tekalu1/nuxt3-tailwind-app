@@ -6,31 +6,31 @@
 
 ## 概要
 
-本アプリケーションは、AIエージェントによる業務自動化を実現するワークフローシステムです。
-n8nのようなビジュアルフローエディタとAIによる自律的なタスク実行を組み合わせています。
+本アプリケーションは、Nuxt 3 + Tailwind CSS + Pinia を基盤としたモダンなWebアプリケーションテンプレートです。
+スケーラブルで保守性の高いフロントエンド開発のベストプラクティスを提供します。
 
 ### 設計原則
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                      Flow（基底型）                       │
-│  ・すべての実行可能要素の基底                              │
-│  ・再帰的な構造（子Flowを持てる）                          │
-│  ・直列/並列実行モード                                    │
-│  ・入出力定義、変数、完了条件                              │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     アプリケーション層                        │
+│  ・ページ/レイアウト                                          │
+│  ・UIコンポーネント（Atomic Design）                          │
+│  ・状態管理（Pinia Stores）                                  │
+│  ・API通信                                                   │
+└─────────────────────────────────────────────────────────────┘
          ↑           ↑           ↑           ↑
     ┌────┴────┐ ┌────┴────┐ ┌────┴────┐ ┌────┴────┐
-    │  Tool   │ │  Todo   │ │  Agent  │ │ Trigger │
-    │(ツール) │ │(タスク) │ │(AI実行) │ │(起動条件)│
+    │ Pages   │ │Components│ │ Stores  │ │Composables│
+    │(ページ) │ │(UI部品) │ │(状態管理)│ │(ロジック)│
     └─────────┘ └─────────┘ └─────────┘ └─────────┘
 ```
 
-**重要**: Tool、Todo、Agent、Triggerすべてが**Flow型を継承**する。これにより：
+**重要**: 各レイヤーは明確な責務を持ち、単方向のデータフローを維持します。これにより：
 
-- 統一的なデータ構造
-- 再帰的な組み合わせが可能
-- 一貫した実行インターフェース
+- 予測可能な状態管理
+- 再利用可能なコンポーネント設計
+- テスト容易性の確保
 
 ---
 
@@ -38,11 +38,11 @@ n8nのようなビジュアルフローエディタとAIによる自律的なタ
 
 | ファイル | 内容 |
 |---------|------|
-| [core-types.md](./core-types.md) | コア型定義（Flow, Tool, Agent, Todo, Trigger） |
-| [execution-engine.md](./execution-engine.md) | 実行エンジン設計 |
-| [database.md](./database.md) | データベース設計（LowDB） |
-| [builtin-tools.md](./builtin-tools.md) | ビルトインツール一覧 |
-| [api.md](./api.md) | API設計（REST/WebSocket） |
+| [types.md](./types.md) | 共通型定義（Entity, Response, Request） |
+| [api-design.md](./api-design.md) | API設計（RESTエンドポイント） |
+| [database.md](./database.md) | データベース設計 |
+
+> **Note**: 上記ファイルはプロジェクトの要件に応じて作成してください。
 
 ---
 
@@ -50,13 +50,46 @@ n8nのようなビジュアルフローエディタとAIによる自律的なタ
 
 | レイヤー | 技術 | 備考 |
 |---------|------|------|
-| フロントエンド | Nuxt3, TailwindCSS, Pinia | - |
-| フローエディタ | Vue Flow | ノードベースUI |
-| AI | OpenAI API / Claude API / ローカルLLM | 切り替え可能 |
-| バックエンド | Nuxt Server Routes (Nitro) | - |
-| データベース | LowDB（JSONベース） | 軽量・ローカル |
-| ファイル管理 | サーバーローカル + DB管理 | - |
-| キュー | Bull / BullMQ | 並列実行用 |
+| フレームワーク | Nuxt 3 | Vue 3 ベースのフルスタックフレームワーク |
+| スタイリング | Tailwind CSS | ユーティリティファーストCSS |
+| 状態管理 | Pinia | Vue 3 公式推奨の状態管理 |
+| バックエンド | Nuxt Server Routes (Nitro) | APIエンドポイント |
+| 型システム | TypeScript | 静的型付け |
+| テスト | Vitest / Playwright | ユニット/E2Eテスト |
+
+---
+
+## プロジェクト固有の型定義
+
+プロジェクトで共通に使用する型は `types/` ディレクトリに配置します。
+
+```typescript
+// types/user.ts - ユーザー関連の型定義例
+export interface User {
+  id: string
+  name: string
+  email: string
+  role: UserRole
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type UserRole = 'admin' | 'member' | 'guest'
+
+// types/api.ts - API関連の型定義例
+export interface ApiResponse<T> {
+  data: T
+  success: boolean
+  message?: string
+}
+
+export interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  page: number
+  limit: number
+}
+```
 
 ---
 

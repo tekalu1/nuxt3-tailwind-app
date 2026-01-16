@@ -32,32 +32,28 @@ features/
 ├── README.md                    # 本ドキュメント
 ├── _template.md                 # テンプレート
 ├── pages/                       # ページ単位の要件
-│   ├── flow-editor.md          # フローエディタ画面
-│   ├── chat-view.md            # チャットビュー画面
-│   └── flow-execution-result-ui.md  # 実行結果UI
-├── tools/                       # ビルトインツールの要件
-│   ├── agent-tool.md           # Agentツール
-│   ├── script-tool.md          # Scriptツール
-│   ├── start-tool.md           # Startツール
-│   ├── end-tool.md             # Endツール
-│   └── magic-flow-tool.md      # MagicFlowツール
+│   ├── user-management.md      # ユーザー管理画面
+│   ├── product-list.md         # 商品一覧画面
+│   └── order-history.md        # 注文履歴画面
+├── features/                    # 機能単位の要件
+│   ├── authentication.md       # 認証機能
+│   ├── search.md               # 検索機能
+│   ├── cart.md                 # カート機能
+│   └── checkout.md             # チェックアウト機能
 └── common/                      # 共通機能の要件
-    ├── ai-flow-generation.md   # AIフロー生成
-    ├── ai-item-config-generation.md  # AIアイテム設定生成
-    ├── flow-editor-auto-save.md      # 自動保存
-    ├── flow-editor-undo-redo.md      # 元に戻す/やり直し
-    ├── flow-editor-version-history.md # バージョン履歴
-    ├── flow-api-publish.md           # API公開
-    └── desktop-app-build.md          # デスクトップアプリビルド
+    ├── form-validation.md      # フォームバリデーション
+    ├── notification.md         # 通知機能
+    ├── pagination.md           # ページネーション
+    └── modal.md                # モーダル
 ```
 
 ### カテゴリの分類基準
 
 | カテゴリ | 説明 | 例 |
 |---------|------|-----|
-| pages/ | ページ単位の要件（Nuxt3のpages/と対応） | フローエディタ、チャットビュー |
-| tools/ | ビルトインツール（ノード）の仕様 | Agent、Script、Start/End |
-| common/ | 複数ページで共通の機能 | 自動保存、Undo/Redo、AI生成 |
+| pages/ | ページ単位の要件（Nuxt3のpages/と対応） | ユーザー管理、商品一覧 |
+| features/ | 特定機能の要件（複数ページで使用可能） | 認証、検索、カート |
+| common/ | 複数ページで共通のUI機能 | バリデーション、通知、モーダル |
 
 ---
 
@@ -73,11 +69,11 @@ features/
 ## 1. 概要
 
 ### 目的
-フローをビジュアルに編集できるエディタを提供する。
+ユーザー情報の一覧表示、検索、編集機能を提供する。
 
 ### 対象ユーザー
-- フロー作成者
 - システム管理者
+- 運用担当者
 ```
 
 ### 2. 機能一覧
@@ -89,9 +85,9 @@ features/
 
 | ID | 機能名 | 説明 | 優先度 |
 |----|--------|------|--------|
-| FR-FLOW-001 | ノード追加 | キャンバスにノードを追加できる | 必須 |
-| FR-FLOW-002 | ノード接続 | ノード間をエッジで接続できる | 必須 |
-| FR-FLOW-003 | ノード設定 | ノードのパラメータを設定できる | 必須 |
+| FR-USER-001 | ユーザー一覧表示 | 登録済みユーザーを一覧表示できる | 必須 |
+| FR-USER-002 | ユーザー検索 | 名前やメールで検索できる | 必須 |
+| FR-USER-003 | ユーザー編集 | ユーザー情報を編集できる | 必須 |
 ```
 
 ### 3. 画面構成
@@ -102,14 +98,14 @@ features/
 ## 3. 画面構成
 
 ### レイアウト
-- 左: ツールパネル（ノード一覧）
-- 中央: キャンバス（フロー編集エリア）
-- 右: 設定パネル（ノード設定）
+- 上部: 検索バー
+- 中央: ユーザーテーブル
+- 下部: ページネーション
 
 ### 主要コンポーネント
-- ToolPanel: ドラッグ可能なツール一覧
-- FlowCanvas: Vue Flow ベースの編集エリア
-- ConfigPanel: 選択ノードの設定フォーム
+- SearchBar: 検索入力フォーム
+- UserTable: ユーザー一覧テーブル
+- Pagination: ページ切り替えコントロール
 ```
 
 ### 4. 操作フロー
@@ -119,14 +115,15 @@ features/
 ```markdown
 ## 4. 操作フロー
 
-### 基本フロー: ノードの追加と接続
+### 基本フロー: ユーザーの検索と編集
 
-1. ユーザーがツールパネルからノードをドラッグ
-2. キャンバス上でドロップ
-3. ノードが追加される
-4. ノードの出力ハンドルをドラッグ
-5. 別のノードの入力ハンドルにドロップ
-6. エッジが作成される
+1. ユーザーが検索バーにキーワードを入力
+2. 検索ボタンをクリック（またはEnter）
+3. 検索結果がテーブルに表示される
+4. 編集したい行の「編集」ボタンをクリック
+5. 編集モーダルが開く
+6. 情報を編集して「保存」をクリック
+7. 成功メッセージが表示され、一覧が更新される
 ```
 
 ### 5. 入出力仕様
@@ -139,8 +136,9 @@ features/
 ### 入力
 | 項目 | 型 | 必須 | バリデーション |
 |------|-----|------|---------------|
-| フロー名 | string | Yes | 1-100文字 |
-| 説明 | string | No | 最大1000文字 |
+| 名前 | string | Yes | 1-100文字 |
+| メール | string | Yes | メール形式 |
+| 役割 | select | Yes | admin/member/guest |
 
 ### 出力
 - 保存成功時: 成功トースト表示
@@ -155,11 +153,11 @@ features/
 ## 6. 非機能要件
 
 ### パフォーマンス
-- 100ノードまで60fps以上で動作すること
-- 保存処理は3秒以内に完了すること
+- 一覧表示は1秒以内に完了すること
+- 検索結果は500ms以内に表示されること
 
 ### セキュリティ
-- 認証済みユーザーのみアクセス可能
+- 管理者権限を持つユーザーのみアクセス可能
 ```
 
 ### 7. テストシナリオへのリンク
@@ -169,8 +167,8 @@ features/
 ```markdown
 ## 7. テストシナリオへのリンク
 
-- [E2E: フローエディタ](../../test/e2e/scenarios/flow-editor.md)
-- [統合: ツール実行](../../test/integration/scenarios/tool-execution.md)
+- [E2E: ユーザー管理](../../test/e2e/scenarios/user-management.md)
+- [統合: ユーザーAPI](../../test/integration/scenarios/user-api.md)
 ```
 
 ---
@@ -187,19 +185,18 @@ FR-{画面コード}-{連番}
 
 | 画面/機能 | コード | 例 |
 |----------|--------|-----|
-| フローエディタ | FLOW | FR-FLOW-001 |
-| フロー実行 | EXEC | FR-EXEC-001 |
-| 変数管理 | VAR | FR-VAR-001 |
+| ホーム | HOME | FR-HOME-001 |
+| ユーザー管理 | USER | FR-USER-001 |
+| 商品一覧 | PROD | FR-PROD-001 |
+| 商品詳細 | PDET | FR-PDET-001 |
+| カート | CART | FR-CART-001 |
+| 注文 | ORDER | FR-ORDER-001 |
 | 設定 | SET | FR-SET-001 |
 | ダッシュボード | DASH | FR-DASH-001 |
-| チャットビュー | CHV | FR-CHV-001 |
-| Agentツール | AGT | FR-AGT-001 |
-| HTTPツール | HTTP | FR-HTTP-001 |
-| Delayツール | DELAY | FR-DELAY-001 |
-| startツール | STR | FR-STR-001 |
-| endツール | END | FR-END-001 |
-| フローAPI公開 | API | FR-API-001 |
-| デスクトップアプリビルド | DESKBLD | FR-DESKBLD-001 |
+| 認証 | AUTH | FR-AUTH-001 |
+| 検索 | SRCH | FR-SRCH-001 |
+| 通知 | NOTIF | FR-NOTIF-001 |
+| フォーム共通 | FORM | FR-FORM-001 |
 
 ---
 
@@ -211,8 +208,8 @@ FR-{画面コード}-{連番}
 # ページの場合
 cp docs/requirements/features/_template.md docs/requirements/features/pages/{ページ名}.md
 
-# ツールの場合
-cp docs/requirements/features/_template.md docs/requirements/features/tools/{ツール名}-tool.md
+# 機能の場合
+cp docs/requirements/features/_template.md docs/requirements/features/features/{機能名}.md
 
 # 共通機能の場合
 cp docs/requirements/features/_template.md docs/requirements/features/common/{機能名}.md

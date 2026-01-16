@@ -67,7 +67,7 @@ tests/
 └── e2e/                   # E2Eテスト
     └── scenarios/
         ├── user-login.spec.ts
-        └── match-flow.spec.ts
+        └── user-registration.spec.ts
 ```
 
 ### ディレクトリ構造のルール
@@ -503,25 +503,25 @@ describe('useAuth', () => {
 **必須:** UIで提供される機能がバックエンドで正しく実装されているか確認する。
 
 ```typescript
-// ✅ 良い例: UIのデフォルトツールがすべて登録されているか確認
-describe('Tool Registry - UI Tool Availability', () => {
-  const uiDefaultTools = [
-    'builtin.control.start',
-    'builtin.control.end',
-    'builtin.control.if',
-    // ... UIで提供されるすべてのツール
+// ✅ 良い例: UIで使用可能なサービスがすべて登録されているか確認
+describe('Service Registry - Available Services', () => {
+  const requiredServices = [
+    'UserService',
+    'ProductService',
+    'OrderService',
+    // ... アプリケーションで使用するすべてのサービス
   ]
 
-  it('should have all UI default tools registered', () => {
-    for (const toolId of uiDefaultTools) {
-      expect(hasToolHandler(toolId), `Tool ${toolId} should be registered`).toBe(true)
+  it('should have all required services registered', () => {
+    for (const serviceName of requiredServices) {
+      expect(hasService(serviceName), `Service ${serviceName} should be registered`).toBe(true)
     }
   })
 })
 ```
 
 **チェックリスト:**
-- [ ] UIで提供される機能（ツール、コンポーネント）がバックエンドに実装されている
+- [ ] UIで提供される機能（サービス、コンポーネント）がバックエンドに実装されている
 - [ ] UIとバックエンドで使用するID/キーが一致している
 - [ ] UIの操作が実際のAPIエンドポイントで正しく処理される
 
@@ -530,22 +530,24 @@ describe('Tool Registry - UI Tool Availability', () => {
 **必須:** 実際のユーザー操作をシミュレートしたテストを作成する。
 
 ```typescript
-// ✅ 良い例: ユーザーがUIで作成するフローと同じ構造でテスト
-function createRealUserFlow(): Flow {
+// ✅ 良い例: ユーザーがUIで作成する注文と同じ構造でテスト
+function createRealOrder(): Order {
   return {
-    nodes: [
-      // UIで作成されるフローと同じ構造
-      { id: 'start', flowId: 'builtin.control.start', ... },
-      { id: 'process', flowId: 'builtin.data.setVariable', ... },
-      { id: 'end', flowId: 'builtin.control.end', ... },
+    id: 'order-001',
+    customerId: 'customer-001',
+    items: [
+      { productId: 'product-001', quantity: 2, price: 1000 },
+      { productId: 'product-002', quantity: 1, price: 2500 },
     ],
-    edges: [...]
+    status: 'pending',
+    totalAmount: 4500,
+    createdAt: new Date(),
   }
 }
 ```
 
 **チェックリスト:**
-- [ ] 新規作成フロー（デフォルトのstart/endノード含む）をテスト
+- [ ] 新規データ作成（デフォルト値含む）をテスト
 - [ ] ユーザーがUIで行う典型的な操作をシナリオとしてテスト
 - [ ] エラー発生時のUI表示とバックエンドレスポンスの整合性を確認
 
@@ -557,7 +559,7 @@ function createRealUserFlow(): Flow {
 
 | 対象 | テスト内容 |
 |------|-----------|
-| ToolRegistry | すべてのビルトインツールが登録されている |
+| サービス層 | すべての必須サービスが登録されている |
 | APIエンドポイント | すべての必須エンドポイントが存在する |
 | ストア | 必要なアクション/ゲッターが実装されている |
 | コンポーネント | 必要なprops/emitsが定義されている |
@@ -567,11 +569,11 @@ function createRealUserFlow(): Flow {
 **必須:** 異常系のテストを網羅する。
 
 ```typescript
-// ✅ 良い例: 未登録ツールの動作確認
-it('should fail gracefully when tool is not found', async () => {
-  const result = await engine.executeFlow(flowWithInvalidTool)
+// ✅ 良い例: 未登録サービスの動作確認
+it('should fail gracefully when service is not found', async () => {
+  const result = await serviceRegistry.execute('invalidService', { data: 'test' })
   expect(result.status).toBe('failed')
-  expect(result.error.message).toContain('Tool not found')
+  expect(result.error.message).toContain('Service not found')
 })
 ```
 
@@ -591,18 +593,18 @@ it('should fail gracefully when tool is not found', async () => {
 
 ```typescript
 // ✅ 良い例: 外部依存の適切な処理
-describe('LLM Integration', () => {
+describe('External API Integration', () => {
   // ユニットテスト: モックを使用
-  it('should handle LLM response correctly', async () => {
-    const mockLLM = vi.fn().mockResolvedValue({ content: 'test response' })
-    const result = await processWithLLM('input', { llmService: mockLLM })
-    expect(result).toBe('processed: test response')
+  it('should handle API response correctly', async () => {
+    const mockApi = vi.fn().mockResolvedValue({ data: { id: 1, name: 'Test Product' } })
+    const result = await fetchProduct('1', { apiClient: mockApi })
+    expect(result.name).toBe('Test Product')
   })
 
   // 統合テスト: モックまたは設定確認
-  it('should call LLM service with correct parameters', async () => {
+  it('should call external API with correct parameters', async () => {
     // APIキーがない場合はスキップ
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.EXTERNAL_API_KEY) {
       test.skip()
       return
     }
@@ -614,24 +616,23 @@ describe('LLM Integration', () => {
 **E2Eテストでの外部依存処理:**
 ```typescript
 // 外部APIが必要なテストのパターン
-test('should execute flow with LLM', async ({ page }) => {
-  await page.goto('/flows/test-flow')
-  await page.click('button:has-text("実行")')
+test('should fetch and display product data', async ({ page }) => {
+  await page.goto('/products/1')
   await page.waitForTimeout(3000)
 
   // エラーメッセージを確認
-  const providerError = await page.locator('text=Provider not available').isVisible()
-  const apiKeyError = await page.locator('text=APIキーが設定されていません').isVisible()
+  const apiError = await page.locator('text=API connection failed').isVisible()
+  const configError = await page.locator('text=APIキーが設定されていません').isVisible()
 
-  if (providerError || apiKeyError) {
+  if (apiError || configError) {
     // 環境設定の問題 → テストをスキップ（設定不備はテスト対象外）
-    console.warn('⚠️ External service not configured - skipping test')
+    console.warn('External API not configured - skipping test')
     test.skip()
     return
   }
 
   // 本来テストしたい内容を検証
-  await expect(page.locator('.status-badge')).toHaveText('完了')
+  await expect(page.locator('.product-name')).toBeVisible()
 })
 ```
 
@@ -666,7 +667,7 @@ const edgeCases = [
 
 | 機能 | ユニットテスト | 統合テスト | E2E | UI整合性 |
 |------|--------------|-----------|-----|---------|
-| 新規ツール追加 | ハンドラテスト | フロー実行 | 実行確認 | ツール選択可能 |
+| 新規機能追加 | サービステスト | API連携 | 動作確認 | 機能選択可能 |
 | APIエンドポイント | レスポンス形式 | DB連携 | 画面表示 | エラー表示 |
 | UIコンポーネント | props/emits | 親子連携 | ユーザー操作 | - |
 

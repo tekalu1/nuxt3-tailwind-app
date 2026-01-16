@@ -143,7 +143,7 @@ text-gray-500 → hover:text-gray-900  ✗ (4段階、避ける)
 フォーカス可能な要素には必ずフォーカスリングを表示します。
 
 ```vue
-<button class="focus:ring-2 focus:ring-shopify-primary focus:ring-offset-2">
+<button class="focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
   ボタン
 </button>
 ```

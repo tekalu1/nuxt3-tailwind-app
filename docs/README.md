@@ -13,8 +13,8 @@ docs/
 ├── requirements/                  # 要件定義
 │   ├── README.md                  # 要件定義ガイド
 │   ├── system/                    # システム要件（型定義）
-│   │   ├── core.ts               # コア要件
-│   │   ├── tools.ts              # ツール要件
+│   │   ├── types.ts              # 共通型定義
+│   │   ├── models.ts             # データモデル定義
 │   │   └── database.ts           # DB要件
 │   └── features/                  # 機能要件（画面別）
 │       ├── README.md             # 機能要件ガイド
@@ -158,20 +158,20 @@ docs/
 
 | 種類 | フォーマット | 例 |
 |-----|-------------|-----|
-| 機能要件 | `FR-{画面}-{番号}` | FR-FLOW-001 |
-| テストケース(E2E) | `TC-E2E-{シナリオ}-{番号}` | TC-E2E-FLOW-001 |
-| テストケース(統合) | `TC-IT-{シナリオ}-{番号}` | TC-IT-TOOL-001 |
+| 機能要件 | `FR-{画面}-{番号}` | FR-USER-001 |
+| テストケース(E2E) | `TC-E2E-{シナリオ}-{番号}` | TC-E2E-USER-001 |
+| テストケース(統合) | `TC-IT-{シナリオ}-{番号}` | TC-IT-AUTH-001 |
 
 ### 相互参照
 
 ```markdown
 # 機能要件書内
 ## テストシナリオへのリンク
-- [フローエディタE2Eシナリオ](../test/e2e/scenarios/flow-editor.md)
+- [ユーザー管理E2Eシナリオ](../test/e2e/scenarios/user-management.md)
 
 # テストシナリオ内
 ## 関連機能要件
-- [FR-FLOW-001](../../requirements/features/flow-editor.md#fr-flow-001)
+- [FR-USER-001](../../requirements/features/user-management.md#fr-user-001)
 ```
 
 ---

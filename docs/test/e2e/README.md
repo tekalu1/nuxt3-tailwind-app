@@ -89,15 +89,15 @@ tests/e2e/scenarios/{機能名}.spec.ts
 
 ```typescript
 // ファイル名: kebab-case
-flow-editor.spec.ts
+user-management.spec.ts
 
 // test.describe: 機能単位
-test.describe('Flow Editor', () => {
+test.describe('User Management', () => {
   // test.describe: ストーリー単位
-  test.describe('Create Flow', () => {
+  test.describe('Create User', () => {
     // test: 具体的なケース (ケースIDをコメント)
-    // TC-E2E-FLOW-001
-    test('should create new flow', async ({ page }) => {
+    // TC-E2E-USER-001
+    test('should create new user', async ({ page }) => {
       // ...
     })
   })
@@ -107,17 +107,21 @@ test.describe('Flow Editor', () => {
 ### ページオブジェクトパターン
 
 ```typescript
-// tests/e2e/pages/FlowEditorPage.ts
-export class FlowEditorPage {
+// tests/e2e/pages/UserListPage.ts
+export class UserListPage {
   constructor(private page: Page) {}
 
   async goto() {
-    await this.page.goto('/flows/new')
+    await this.page.goto('/users')
   }
 
-  async addNode(nodeType: string) {
-    await this.page.click(`[data-tool="${nodeType}"]`)
-    await this.page.click('.vue-flow__pane')
+  async clickCreateButton() {
+    await this.page.click('[data-testid="create-user-button"]')
+  }
+
+  async fillUserForm(name: string, email: string) {
+    await this.page.fill('[data-testid="user-name-input"]', name)
+    await this.page.fill('[data-testid="user-email-input"]', email)
   }
 
   async save() {
@@ -130,18 +134,20 @@ export class FlowEditorPage {
 
 ```typescript
 import { test, expect } from '@playwright/test'
-import { FlowEditorPage } from '../pages/FlowEditorPage'
+import { UserListPage } from '../pages/UserListPage'
 
-test.describe('Flow Editor', () => {
-  // TC-E2E-FLOW-001
-  test('should create new flow with start node', async ({ page }) => {
-    const flowEditor = new FlowEditorPage(page)
+test.describe('User Management', () => {
+  // TC-E2E-USER-001
+  test('should create new user', async ({ page }) => {
+    const userList = new UserListPage(page)
 
-    await flowEditor.goto()
-    await flowEditor.addNode('builtin.control.start')
-    await flowEditor.save()
+    await userList.goto()
+    await userList.clickCreateButton()
+    await userList.fillUserForm('John Doe', 'john@example.com')
+    await userList.save()
 
     await expect(page.locator('.success-toast')).toBeVisible()
+    await expect(page.locator('[data-testid="user-list-table"]')).toContainText('John Doe')
   })
 })
 ```
@@ -179,9 +185,9 @@ await page.click('.btn.btn-primary.save')
 {コンポーネント}-{要素}-{状態}
 
 例:
-- flow-editor-canvas
-- node-config-input-name
-- toolbar-button-save
+- user-list-table
+- user-form-input-name
+- product-card-button-add
 ```
 
 ---
@@ -195,7 +201,7 @@ await page.click('.btn.btn-primary.save')
 pnpm test:e2e
 
 # 特定ファイルのみ
-pnpm playwright test tests/e2e/scenarios/flow-editor.spec.ts
+pnpm playwright test tests/e2e/scenarios/user-management.spec.ts
 
 # UIモードで実行
 pnpm playwright test --ui

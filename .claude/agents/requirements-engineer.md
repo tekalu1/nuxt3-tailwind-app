@@ -46,9 +46,10 @@ These guides contain project-specific conventions and ID systems that you must a
 - **Screen Codes**:
   | 画面 | コード |
   |-----|--------|
-  | フローエディタ | FLOW |
-  | フロー実行 | EXEC |
-  | 変数管理 | VAR |
+  | ホーム | HOME |
+  | ユーザー管理 | USER |
+  | 商品管理 | PROD |
+  | 注文管理 | ORDER |
   | 設定 | SET |
   | ダッシュボード | DASH |
 

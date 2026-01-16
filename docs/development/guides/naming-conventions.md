@@ -51,7 +51,7 @@
 // ✅ 良い例
 const userName = 'John Doe'
 const isActive = true
-const matchCount = 10
+const orderCount = 10
 
 // ❌ 悪い例
 const UserName = 'John Doe'
@@ -126,7 +126,7 @@ interface User {
   name: string
 }
 
-type MatchStatus = 'pending' | 'accepted' | 'rejected'
+type OrderStatus = 'pending' | 'processing' | 'completed'
 
 interface ApiResponse<T> {
   data: T
@@ -275,12 +275,12 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
-model Match {
-  id           String      @id @default(cuid())
-  requesterId  String
-  recipientId  String
-  status       MatchStatus
-  createdAt    DateTime    @default(now())
+model Order {
+  id          String      @id @default(cuid())
+  customerId  String
+  totalAmount Int
+  status      OrderStatus
+  createdAt   DateTime    @default(now())
 }
 ```
 
@@ -365,7 +365,7 @@ refactorApiErrorHandling
 | 型・インターフェース | PascalCase | `User`, `ApiResponse<T>` |
 | コンポーネント（テンプレート） | PascalCase | `<CommonAtomsButton>` |
 | CSS クラス（BEM） | kebab-case | `user-card__header` |
-| データベースモデル | PascalCase | `User`, `Match` |
+| データベースモデル | PascalCase | `User`, `Order` |
 | データベースフィールド | camelCase | `userId`, `createdAt` |
 | API パス | kebab-case | `/api/users` |
 | 環境変数 | UPPER_SNAKE_CASE | `DATABASE_URL` |

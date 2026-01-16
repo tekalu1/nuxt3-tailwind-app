@@ -11,25 +11,23 @@ requirements/
 ├── README.md              # 本ドキュメント
 ├── system/                # システム要件（PJ固有アーキテクチャ）
 │   ├── README.md         # 概要・ナビゲーション
-│   ├── core-types.md     # コア型定義（Flow, Tool, Agent, Todo）
-│   ├── execution-engine.md # 実行エンジン設計
-│   ├── database.md       # データベース設計（LowDB）
-│   ├── builtin-tools.md  # ビルトインツール一覧
-│   └── api.md            # API設計（REST/WebSocket）
-└── features/              # 機能要件（ページ・ツール・共通機能）
+│   ├── types.md          # 共通型定義（Entity, Response, Request）
+│   ├── api-design.md     # API設計（RESTエンドポイント）
+│   └── database.md       # データベース設計
+└── features/              # 機能要件（ページ・機能・共通機能）
     ├── README.md         # 機能要件ガイド
     ├── _template.md      # テンプレート
     ├── pages/            # ページ単位
-    │   ├── flow-editor.md
-    │   ├── chat-view.md
-    │   └── flow-execution-result-ui.md
-    ├── tools/            # ビルトインツール
-    │   ├── agent-tool.md
-    │   ├── script-tool.md
+    │   ├── user-management.md
+    │   ├── product-list.md
+    │   └── order-history.md
+    ├── features/         # 機能単位
+    │   ├── authentication.md
+    │   ├── search.md
     │   └── ...
     └── common/           # 共通機能
-        ├── ai-flow-generation.md
-        ├── flow-editor-auto-save.md
+        ├── form-validation.md
+        ├── notification.md
         └── ...
 ```
 
@@ -43,11 +41,9 @@ requirements/
 
 | ドキュメント | 内容 |
 |-------------|------|
-| [core-types.md](./system/core-types.md) | コア型定義（Flow, Tool, Agent, Todo, Trigger） |
-| [execution-engine.md](./system/execution-engine.md) | 実行エンジン設計 |
-| [database.md](./system/database.md) | データベース設計（LowDB） |
-| [builtin-tools.md](./system/builtin-tools.md) | ビルトインツール一覧 |
-| [api.md](./system/api.md) | API設計（REST/WebSocket） |
+| [types.md](./system/types.md) | 共通型定義（Entity, Response, Request） |
+| [api-design.md](./system/api-design.md) | API設計（RESTエンドポイント） |
+| [database.md](./system/database.md) | データベース設計 |
 
 **特徴:**
 - プロジェクト固有のアーキテクチャを定義
@@ -60,9 +56,9 @@ requirements/
 
 | カテゴリ | 内容 | 例 |
 |---------|------|-----|
-| [pages/](./features/pages/) | ページ単位の要件 | フローエディタ、チャットビュー |
-| [tools/](./features/tools/) | ビルトインツールの要件 | Agent、Script、Start/End |
-| [common/](./features/common/) | 共通機能の要件 | 自動保存、Undo/Redo、AI生成 |
+| [pages/](./features/pages/) | ページ単位の要件 | ユーザー管理、商品一覧 |
+| [features/](./features/features/) | 機能単位の要件 | 認証、検索機能 |
+| [common/](./features/common/) | 共通機能の要件 | フォームバリデーション、通知 |
 
 **特徴:**
 - ユーザー視点で機能を記述
@@ -79,8 +75,8 @@ requirements/
 # ページの場合
 cp docs/requirements/features/_template.md docs/requirements/features/pages/{ページ名}.md
 
-# ツールの場合
-cp docs/requirements/features/_template.md docs/requirements/features/tools/{ツール名}-tool.md
+# 機能の場合
+cp docs/requirements/features/_template.md docs/requirements/features/features/{機能名}.md
 
 # 共通機能の場合
 cp docs/requirements/features/_template.md docs/requirements/features/common/{機能名}.md
@@ -97,8 +93,8 @@ cp docs/requirements/features/_template.md docs/requirements/features/common/{�
 ```markdown
 ## 関連テストシナリオ
 
-- [E2E: フローエディタ](../../test/e2e/scenarios/flow-editor.md)
-- [統合: ツール実行](../../test/integration/scenarios/tool-execution.md)
+- [E2E: ユーザー管理](../../test/e2e/scenarios/user-management.md)
+- [統合: 認証機能](../../test/integration/scenarios/authentication.md)
 ```
 
 ---
@@ -117,27 +113,27 @@ FR-{画面コード}-{連番}
 
 | 画面/機能 | コード |
 |----------|-------|
-| フローエディタ | FLOW |
-| フロー実行 | EXEC |
-| 変数管理 | VAR |
+| ホーム | HOME |
+| ユーザー管理 | USER |
+| 商品一覧 | PROD |
+| 商品詳細 | PDET |
+| カート | CART |
+| 注文 | ORDER |
 | 設定 | SET |
 | ダッシュボード | DASH |
-| チャットビュー | CHV |
-| Agentツール | AGT |
-| HTTPツール | HTTP |
-| Delayツール | DELAY |
-| startツール | STR |
-| endツール | END |
-| フローAPI公開 | API |
-| デスクトップアプリビルド | DESKBLD |
+| 認証 | AUTH |
+| 検索 | SRCH |
+| 通知 | NOTIF |
+| フォーム共通 | FORM |
 
 ### 例
 
 | ID | 機能 |
 |----|------|
-| FR-FLOW-001 | フローにノードを追加できる |
-| FR-FLOW-002 | ノード間を接続できる |
-| FR-EXEC-001 | フローを実行できる |
+| FR-USER-001 | ユーザー一覧を表示できる |
+| FR-USER-002 | ユーザーを新規登録できる |
+| FR-PROD-001 | 商品一覧を表示できる |
+| FR-AUTH-001 | ログインできる |
 
 ---
 

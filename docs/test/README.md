@@ -87,8 +87,8 @@
 ```markdown
 | ID | カテゴリ | ケース | パターン参照 | 実装状況 |
 |----|---------|--------|-------------|---------|
-| TC-E2E-FLOW-001 | 正常系 | ノードを追加できる | P1 | 実装済 |
-| TC-E2E-FLOW-002 | 異常系 | 不正な接続でエラー | P2 | 未実装 |
+| TC-E2E-USER-001 | 正常系 | ユーザーを登録できる | P1 | 実装済 |
+| TC-E2E-USER-002 | 異常系 | 必須項目未入力でエラー | P2 | 未実装 |
 ```
 
 #### 5. テストコード実装
@@ -133,10 +133,11 @@ tests/
 UIで提供される機能がバックエンドに実装されているか確認します。
 
 ```typescript
-// 例: ツールレジストリの登録確認
-const uiDefaultTools = getDefaultTools().map(t => t.id)
-for (const toolId of uiDefaultTools) {
-  expect(hasToolHandler(toolId)).toBe(true)
+// 例: Piniaストアのアクションが正しく登録されているか確認
+const userStore = useUserStore()
+const expectedActions = ['fetchUsers', 'createUser', 'updateUser', 'deleteUser']
+for (const action of expectedActions) {
+  expect(typeof userStore[action]).toBe('function')
 }
 ```
 
@@ -145,13 +146,13 @@ for (const toolId of uiDefaultTools) {
 実際のユーザー操作をシミュレートします。
 
 ```typescript
-// 例: フロー作成フロー
-test('ユーザーがフローを作成できる', async () => {
-  // 1. フロー一覧ページにアクセス
-  // 2. 新規作成ボタンをクリック
-  // 3. フロー名を入力
+// 例: ユーザー登録フロー
+test('ユーザーが新規登録できる', async () => {
+  // 1. ユーザー一覧ページにアクセス
+  // 2. 新規登録ボタンをクリック
+  // 3. ユーザー名・メールアドレスを入力
   // 4. 保存ボタンをクリック
-  // 5. フロー一覧に追加されていることを確認
+  // 5. ユーザー一覧に追加されていることを確認
 })
 ```
 
@@ -161,8 +162,8 @@ test('ユーザーがフローを作成できる', async () => {
 
 | 対象 | 最小 | 最大 | 無効 |
 |------|------|------|------|
-| フロー名 | 1文字 | 100文字 | 空文字, 101文字 |
-| ノード数 | 1 | 100 | 0 |
+| ユーザー名 | 1文字 | 50文字 | 空文字, 51文字 |
+| 商品数 | 1 | 999 | 0, 1000 |
 
 ### 4. エラーパステスト
 
@@ -178,10 +179,12 @@ test('ユーザーがフローを作成できる', async () => {
 UIで提供される機能とバックエンド実装の整合性を確認します。
 
 ```typescript
-// 例: UIのデフォルトツールがすべて実行可能
-for (const tool of getDefaultTools()) {
-  const result = await executeTool(tool.id, {})
-  expect(result).toBeDefined()
+// 例: UIで表示される商品カテゴリがすべてAPIから取得可能
+const productStore = useProductStore()
+const uiCategories = ['electronics', 'clothing', 'books']
+for (const category of uiCategories) {
+  const products = await productStore.fetchByCategory(category)
+  expect(products).toBeDefined()
 }
 ```
 
@@ -193,9 +196,9 @@ for (const tool of getDefaultTools()) {
 
 | 種類 | フォーマット | 例 |
 |-----|-------------|-----|
-| 機能要件 | `FR-{画面}-{番号}` | FR-FLOW-001 |
-| E2Eテストケース | `TC-E2E-{シナリオ}-{番号}` | TC-E2E-FLOW-001 |
-| 統合テストケース | `TC-IT-{シナリオ}-{番号}` | TC-IT-TOOL-001 |
+| 機能要件 | `FR-{画面}-{番号}` | FR-USER-001 |
+| E2Eテストケース | `TC-E2E-{シナリオ}-{番号}` | TC-E2E-USER-001 |
+| 統合テストケース | `TC-IT-{シナリオ}-{番号}` | TC-IT-PRODUCT-001 |
 
 ### 相互参照
 
@@ -204,11 +207,11 @@ for (const tool of getDefaultTools()) {
 ```markdown
 # 機能要件書内
 ## テストシナリオへのリンク
-- [フローエディタE2Eシナリオ](../../test/e2e/scenarios/flow-editor.md)
+- [ユーザー管理E2Eシナリオ](../../test/e2e/scenarios/user-management.md)
 
 # テストシナリオ内
 ## 関連機能要件
-- [FR-FLOW-001](../../requirements/features/flow-editor.md#fr-flow-001)
+- [FR-USER-001](../../requirements/features/user-management.md#fr-user-001)
 ```
 
 ---
